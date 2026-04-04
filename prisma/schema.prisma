@@ -1,0 +1,80 @@
+// Wedding guest list — SQLite (local MVP)
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum GuestCategory {
+  IMMEDIATE_FAMILY
+  FAMILY_FRIENDS
+  FRIENDS
+  PLUS_ONE
+}
+
+enum GuestSide {
+  RIA
+  SUNNY
+  BOTH
+}
+
+enum ManualPriority {
+  MUST_INVITE
+  NICE_TO_HAVE
+  CUT_IF_NEEDED
+}
+
+model Group {
+  id     String  @id @default(cuid())
+  label  String?
+  guests Guest[]
+}
+
+model Guest {
+  id            String         @id @default(cuid())
+  firstName     String
+  lastName      String
+  category      GuestCategory
+  side          GuestSide
+  priorityScore Float          @default(0)
+  manualPriority ManualPriority @default(NICE_TO_HAVE)
+  groupId       String?
+  group         Group?         @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  isPlusOne     Boolean        @default(false)
+  linkedGuestId String?
+  linkedGuest   Guest?         @relation("GuestPartners", fields: [linkedGuestId], references: [id], onDelete: SetNull)
+  partners      Guest[]        @relation("GuestPartners")
+  notes         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  scenarioGuests ScenarioGuest[]
+}
+
+model Scenario {
+  id             String   @id @default(cuid())
+  name           String
+  filterPreset   String? // JSON
+  isLocked       Boolean  @default(false)
+  isDefault      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  scenarioGuests ScenarioGuest[]
+}
+
+model ScenarioGuest {
+  scenarioId String
+  guestId    String
+  invited    Boolean
+  scenario   Scenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  guest      Guest    @relation(fields: [guestId], references: [id], onDelete: Cascade)
+
+  @@id([scenarioId, guestId])
+  @@index([scenarioId])
+  @@index([guestId])
+}
