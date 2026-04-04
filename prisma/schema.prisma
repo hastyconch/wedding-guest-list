@@ -49,6 +49,8 @@ model Guest {
   linkedGuest   Guest?         @relation("GuestPartners", fields: [linkedGuestId], references: [id], onDelete: SetNull)
   partners      Guest[]        @relation("GuestPartners")
   notes         String?
+  /// Comma-separated labels (e.g. "cut,rsvp-followup") for filtering & display
+  tags          String?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 
@@ -77,4 +79,11 @@ model ScenarioGuest {
   @@id([scenarioId, guestId])
   @@index([scenarioId])
   @@index([guestId])
+}
+
+/// Single-user MVP: stores Google OAuth refresh token for Sheets API
+model OAuthCredential {
+  id           String   @id
+  refreshToken String?
+  updatedAt    DateTime @updatedAt
 }

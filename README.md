@@ -1,36 +1,72 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Wedding guest list
 
-## Getting Started
+Next.js (App Router) + **Route Handlers** + **Prisma 7** + **SQLite** (`file:./dev.db`) with the **`@prisma/adapter-better-sqlite3`** driver adapter (required for Prisma ORM 7).
 
-First, run the development server:
+**UI** is inspired by **Discord**: dark layered surfaces (`#1e1f22` / `#2b2d31` / `#313338`), blurple accent (`#5865F2`), left sidebar with channel-style nav, mobile bottom bar, and “online”-style green toggles for invited guests.
+
+## Setup
 
 ```bash
+cd wedding-guest-list
+npm install
+npx prisma migrate dev  # if you change schema
+npx prisma db seed      # “Base List” scenario only (add guests via import or /guests)
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Command | Description |
+|--------|-------------|
+| `npm run dev` | Dev server |
+| `npm run build` | `prisma generate` + `next build` |
+| `npm run start` | Production server |
+| `npm run db:seed` | Run `prisma/seed.ts` |
 
-## Learn More
+## Environment
 
-To learn more about Next.js, take a look at the following resources:
+- `DATABASE_URL` — default `file:./dev.db` (SQLite file at project root). Prisma CLI and the app resolve paths from the project root.
+- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — for **Google Sheets import** (see below).
+- `NEXT_PUBLIC_APP_URL` — optional; defaults to `http://localhost:3000`. Must match how you open the app if you change port or domain (OAuth redirect uses it).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Google Sheets import
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. **Google Cloud Console** → enable **Google Sheets API** for your project.
+2. **OAuth consent screen** — add scope `.../auth/spreadsheets.readonly` (or broader if you change code).
+3. **Credentials** → your Web client → **Authorized redirect URIs** must include exactly:
+   - `http://localhost:3000/api/google/callback`
+4. Copy **Client ID** and **Client secret** into `.env.local` (see [`.env.example`](.env.example)).
+5. Run `npx prisma migrate dev` (adds `OAuthCredential` table), then `npm run dev`.
+6. On the **Dashboard**, click **Connect Google**, approve access, then paste a **Spreadsheet ID** (from the Google Sheet URL) and **Import rows**.
 
-## Deploy on Vercel
+**API routes:** `GET /api/google/auth` (starts OAuth), `GET /api/google/callback`, `GET /api/google/status`, `POST /api/google/import`, `POST /api/google/disconnect`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+**Sheet format:** Row 1 = headers. Required columns: `first_name`, `last_name`. Optional: `category`, `side`, `manual_priority`, `notes` (see `src/lib/google-sheet-import.ts`).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+If you ever pasted secrets into `package.json` or committed `.env.local`, **rotate the client secret** in Google Cloud.
+
+## Data model (Prisma)
+
+- **Guest** — name, category, side, `priorityScore`, `manualPriority`, optional `groupId`, `linkedGuestId`, `isPlusOne`, notes.
+- **Group** — household label.
+- **Scenario** — named list; `filterPreset` (JSON string, optional); `isLocked`, `isDefault`.
+- **ScenarioGuest** — per-scenario `invited` flag (composite key `scenarioId` + `guestId`).
+
+## API (Route Handlers)
+
+- `GET/POST /api/guests` — list (query `scenarioId`) / create (requires `scenarioId` to attach `ScenarioGuest`).
+- `PATCH/DELETE /api/guests/[id]`
+- `GET/POST /api/scenarios`
+- `GET/PATCH/DELETE /api/scenarios/[id]`
+- `POST /api/scenarios/[id]/duplicate` — body `{ "name": "..." }`
+- `POST /api/scenarios/[id]/auto-fill` — priority engine, cap **200**
+- `PATCH /api/scenarios/[id]/guests` — body `{ guestId, invited }`
+- Google: `GET /api/google/auth`, `GET /api/google/callback`, `GET /api/google/status`, `POST /api/google/import`, `POST /api/google/disconnect`
+
+Shared logic lives under `src/lib/data/` so pages can call the same functions without an HTTP roundtrip.
+
+## Deploying
+
+SQLite on serverless hosts (e.g. Vercel) is not durable. For production, move to Postgres (e.g. Neon) and a matching Prisma adapter, or host on a VM with a persistent disk.
