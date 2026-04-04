@@ -8,14 +8,8 @@ import { PrismaClient } from '@/generated/prisma/client'
 loadEnvConfig(process.cwd())
 
 function resolveSqliteFilePath(): string {
-  const raw =
-    process.env.DATABASE_URL ??
-    (process.env.NODE_ENV !== 'production' ? 'file:./dev.db' : undefined)
-  if (!raw) {
-    throw new Error(
-      'DATABASE_URL is not set. Add DATABASE_URL="file:./dev.db" to .env or .env.local'
-    )
-  }
+  /** Default when unset (e.g. Vercel has no `.env` — set `DATABASE_URL` in the dashboard to override). */
+  const raw = process.env.DATABASE_URL ?? 'file:./dev.db'
   if (!raw.startsWith('file:')) {
     throw new Error(`Expected DATABASE_URL to start with file: — got ${raw}`)
   }
