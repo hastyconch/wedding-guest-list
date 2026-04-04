@@ -38,11 +38,21 @@ export default async function Home() {
         <div className="rounded-lg border border-white/10 bg-[#2b2d31] p-6 shadow-sm">
           <p className="font-semibold text-[#dbdee1]">No scenarios yet.</p>
           <p className="mt-2 text-sm text-[#949ba4]">
-            Run{' '}
+            Locally: run{' '}
             <code className="rounded bg-[#1e1f22] px-1.5 py-0.5 text-xs text-[#dbdee1]">
               npx prisma db seed
             </code>{' '}
-            from the project folder, then refresh.
+            then refresh. On Vercel: set{' '}
+            <code className="rounded bg-[#1e1f22] px-1.5 py-0.5 text-xs">SEED_SECRET</code>{' '}
+            in project env, redeploy, then{' '}
+            <code className="rounded bg-[#1e1f22] px-1.5 py-0.5 text-xs">
+              POST /api/admin/seed
+            </code>{' '}
+            with header{' '}
+            <code className="rounded bg-[#1e1f22] px-1.5 py-0.5 text-xs">
+              x-seed-secret
+            </code>
+            .
           </p>
         </div>
       )
