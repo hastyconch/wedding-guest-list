@@ -1,9 +1,9 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  /** Ensure migration SQL is present when `prisma migrate deploy` runs on Vercel cold start. */
+  /** Migrations + baked SQLite template copied to `/tmp` at runtime on Vercel. */
   outputFileTracingIncludes: {
-    '/*': ['./prisma/migrations/**/*'],
+    '/*': ['./prisma/migrations/**/*', './prisma/build.db'],
   },
   serverExternalPackages: ['better-sqlite3'],
 }

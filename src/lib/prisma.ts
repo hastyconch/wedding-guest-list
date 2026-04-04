@@ -1,5 +1,4 @@
-import { execSync } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { copyFileSync, existsSync } from 'node:fs'
 import path from 'node:path'
 
 import { loadEnvConfig } from '@next/env'
@@ -41,37 +40,29 @@ function sqliteUrlToAbsolutePath(url: string): string {
 }
 
 /**
- * On Vercel, `/tmp` starts empty on cold start — apply migrations so the SQLite file exists.
+ * Vercel: `/tmp` is writable but empty. We ship a migrated empty DB from `prisma/build.db`
+ * (created in `npm run build`) and copy it once — `npx prisma migrate deploy` is not available in the serverless bundle.
  */
-function ensureSqliteMigrated(fileUrl: string) {
+function ensureVercelSqliteFromBuildArtifact(fileUrl: string) {
   if (process.env.VERCEL !== '1' && process.env.VERCEL !== 'true') return
 
-  const g = globalThis as unknown as { __weddingPrismaMigrateDone?: boolean }
-  if (g.__weddingPrismaMigrateDone) return
+  const g = globalThis as unknown as { __weddingSqliteCopied?: boolean }
+  if (g.__weddingSqliteCopied) return
 
   const absolutePath = sqliteUrlToAbsolutePath(fileUrl)
-
   if (existsSync(absolutePath)) {
-    g.__weddingPrismaMigrateDone = true
+    g.__weddingSqliteCopied = true
     return
   }
 
-  try {
-    execSync('npx prisma migrate deploy', {
-      stdio: 'pipe',
-      env: { ...process.env, DATABASE_URL: fileUrl },
-      cwd: process.cwd(),
-      timeout: 120_000,
-    })
-  } catch (e) {
-    if (existsSync(absolutePath)) {
-      g.__weddingPrismaMigrateDone = true
-      return
-    }
-    console.error('[prisma] migrate deploy failed on Vercel', e)
-    throw e
+  const template = path.join(process.cwd(), 'prisma', 'build.db')
+  if (!existsSync(template)) {
+    throw new Error(
+      'Missing prisma/build.db. Run `npm run build` locally — Vercel build must run `prisma migrate deploy` before `next build`.'
+    )
   }
-  g.__weddingPrismaMigrateDone = true
+  copyFileSync(template, absolutePath)
+  g.__weddingSqliteCopied = true
 }
 
 const globalForPrisma = globalThis as unknown as {
@@ -80,7 +71,7 @@ const globalForPrisma = globalThis as unknown as {
 
 function createClient(): PrismaClient {
   const fileUrl = resolveSqliteFileUrl()
-  ensureSqliteMigrated(fileUrl)
+  ensureVercelSqliteFromBuildArtifact(fileUrl)
   const absolutePath = sqliteUrlToAbsolutePath(fileUrl)
   const adapter = new PrismaBetterSqlite3({ url: absolutePath })
   return new PrismaClient({ adapter })

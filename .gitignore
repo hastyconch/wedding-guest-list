@@ -46,3 +46,6 @@ next-env.d.ts
 # local SQLite
 /dev.db
 /dev.db-journal
+# generated at build time for Vercel (copy → /tmp at runtime)
+/prisma/build.db
+/prisma/build.db-journal
