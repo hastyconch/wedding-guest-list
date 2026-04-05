@@ -20,7 +20,7 @@ export function assertGoogleEnv(): { clientId: string; clientSecret: string } {
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET
   if (!clientId?.trim() || !clientSecret?.trim()) {
     throw new Error(
-      'Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET. Add them to .env.local in the wedding-guest-list folder (same level as package.json), save, then restart npm run dev. See .env.example.'
+      'Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET. Local: add both to .env.local next to package.json and restart npm run dev. Vercel: Project → Settings → Environment Variables, then redeploy. See .env.example.'
     )
   }
   return { clientId, clientSecret }
