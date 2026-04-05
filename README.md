@@ -7,7 +7,7 @@ Next.js (App Router) + **Route Handlers** + **Prisma 7** + **PostgreSQL** (via `
 ## Setup (local)
 
 1. Create a **Postgres** database. Easiest: [Neon](https://neon.tech) free tier → copy the connection string (`postgresql://…`).
-2. Copy [`.env.example`](.env.example) to `.env.local` and set `DATABASE_URL` to that string.
+2. Copy [`.env.example`](.env.example) to `.env.local` and set `DATABASE_URL`, **`ADMIN_IMPORT_USER`**, and **`ADMIN_IMPORT_PASSWORD`** (used to unlock **Google Sheets import** at `/admin/import`).
 3. Run migrations and seed:
 
 ```bash
@@ -32,7 +32,7 @@ The app used to support SQLite with a file on disk. **Serverless hosts (e.g. Ver
    - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — same OAuth app as local (add your Vercel URL to **Authorized redirect URIs**, e.g. `https://your-app.vercel.app/api/google/callback`).
    - `NEXT_PUBLIC_APP_URL` — `https://your-app.vercel.app` (matches how users open the site).
 3. **Redeploy.** The build runs `prisma migrate deploy`, which applies migrations to that database.
-4. Open the live URL once; the dashboard creates the default **Base List** scenario if needed. Connect Google and import your sheet — **all visitors** will see the same list.
+4. Open the live URL once; the dashboard creates the default **Base List** scenario if needed. Add **`ADMIN_IMPORT_PASSWORD`** (and optional `ADMIN_IMPORT_USER`, default `admin`) in Vercel — same as local. Then open **`/admin/import`**, sign in, connect Google, and import — **all visitors** see the same guest list; only someone with the admin password can import or disconnect Google.
 
 Optional: `SEED_SECRET` + `POST /api/admin/seed` is only needed if you prefer API-based seeding instead of the automatic scenario creation.
 
@@ -48,6 +48,8 @@ Optional: `SEED_SECRET` + `POST /api/admin/seed` is only needed if you prefer AP
 ## Environment
 
 - `DATABASE_URL` — **required**; must be `postgres://` or `postgresql://`.
+- `ADMIN_IMPORT_USER` / `ADMIN_IMPORT_PASSWORD` — **required for import**; protects `/admin/import` and Google Sheets API routes (`/api/google/*` import-related actions, clear-import). Username defaults to `admin` if unset.
+- `ADMIN_IMPORT_SECRET` — optional; used to sign the admin session cookie (defaults to a derivation of `ADMIN_IMPORT_PASSWORD`).
 - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — for **Google Sheets import**.
 - `NEXT_PUBLIC_APP_URL` — optional locally; **set on Vercel** to your production URL for OAuth redirects.
 

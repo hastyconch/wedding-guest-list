@@ -1,6 +1,6 @@
 'use client'
 
-import { LayoutDashboard, Users } from 'lucide-react'
+import { FileSpreadsheet, LayoutDashboard, Users } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
@@ -9,6 +9,12 @@ import { cn } from '@/lib/utils'
 const items = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { href: '/guests', label: 'Guests', icon: Users, exact: false },
+  {
+    href: '/admin/import',
+    label: 'Sheet import',
+    icon: FileSpreadsheet,
+    exact: false,
+  },
 ]
 
 function isActive(pathname: string, href: string, exact: boolean) {

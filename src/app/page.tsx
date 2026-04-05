@@ -1,9 +1,6 @@
 import Link from 'next/link'
-import { Suspense } from 'react'
 
 import { AutoFillButton } from '@/components/auto-fill-button'
-import { GoogleOAuthBanner } from '@/components/google-oauth-banner'
-import { GoogleSheetsImport } from '@/components/google-sheets-import'
 import { HouseholdBreakdownPanel } from '@/components/household-breakdown'
 import { InvitedBreakdownPanel } from '@/components/invited-breakdown'
 import {
@@ -60,10 +57,6 @@ export default async function Home() {
 
   return (
     <div className="space-y-6">
-      <Suspense fallback={null}>
-        <GoogleOAuthBanner />
-      </Suspense>
-
       {/* Channel-style header */}
       <div className="border-b border-white/8 pb-4">
         <div className="flex items-center gap-2 text-[#949ba4]">
@@ -131,14 +124,18 @@ export default async function Home() {
             Toggle invites, categories, and warnings.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
           <Link href="/guests" className={secondaryBtnClass}>
             Open guests
           </Link>
+          <Link
+            href="/admin/import"
+            className={secondaryBtnClass}
+          >
+            Import from Google Sheets (admin)
+          </Link>
         </CardContent>
       </Card>
-
-      <GoogleSheetsImport scenarioId={scenario.id} />
     </div>
   )
 }

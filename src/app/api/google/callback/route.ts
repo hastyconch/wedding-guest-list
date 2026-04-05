@@ -18,11 +18,13 @@ export async function GET(req: Request) {
 
   if (err) {
     return NextResponse.redirect(
-      `${base}/?google=error&message=${encodeURIComponent(err)}`
+      `${base}/admin/import?google=error&message=${encodeURIComponent(err)}`
     )
   }
   if (!code) {
-    return NextResponse.redirect(`${base}/?google=error&message=missing_code`)
+    return NextResponse.redirect(
+      `${base}/admin/import?google=error&message=missing_code`
+    )
   }
 
   try {
@@ -37,16 +39,16 @@ export async function GET(req: Request) {
       })
     } else {
       return NextResponse.redirect(
-        `${base}/?google=error&message=${encodeURIComponent(
+        `${base}/admin/import?google=error&message=${encodeURIComponent(
           'No refresh token — remove app access in Google Account → Security → Third-party access, then connect again'
         )}`
       )
     }
-    return NextResponse.redirect(`${base}/?google=connected`)
+    return NextResponse.redirect(`${base}/admin/import?google=connected`)
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'token_exchange_failed'
     return NextResponse.redirect(
-      `${base}/?google=error&message=${encodeURIComponent(msg)}`
+      `${base}/admin/import?google=error&message=${encodeURIComponent(msg)}`
     )
   }
 }

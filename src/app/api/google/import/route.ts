@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { createOAuth2Client, OAUTH_ID } from '@/lib/google-oauth'
 import { normalizeSpreadsheetId } from '@/lib/google-sheet-id'
 import { parseHeaderRow, rowToGuest } from '@/lib/google-sheet-import'
+import { requireAdminImportSession } from '@/lib/admin-import-auth'
 import { resolveScenarioForImport } from '@/lib/data/scenarios'
 import { prisma } from '@/lib/prisma'
 
@@ -17,6 +18,9 @@ const bodySchema = z.object({
 })
 
 export async function POST(req: Request) {
+  const denied = await requireAdminImportSession()
+  if (denied) return denied
+
   const json = await req.json()
   const parsed = bodySchema.safeParse(json)
   if (!parsed.success) {

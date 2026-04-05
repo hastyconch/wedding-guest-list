@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 
+import { requireAdminImportSession } from '@/lib/admin-import-auth'
 import { resolveScenarioForImport } from '@/lib/data/scenarios'
 import { prisma } from '@/lib/prisma'
 
@@ -8,6 +9,9 @@ export const runtime = 'nodejs'
 type Ctx = { params: Promise<{ id: string }> }
 
 export async function POST(_req: Request, ctx: Ctx) {
+  const denied = await requireAdminImportSession()
+  if (denied) return denied
+
   const { id: scenarioId } = await ctx.params
 
   const scenario = await resolveScenarioForImport(scenarioId)
