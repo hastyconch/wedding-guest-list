@@ -1,11 +1,8 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  /** Migrations + baked SQLite template copied to `/tmp` at runtime on Vercel. */
-  outputFileTracingIncludes: {
-    '/*': ['./prisma/migrations/**/*', './prisma/build.db'],
-  },
-  serverExternalPackages: ['better-sqlite3'],
+  /** Native `pg` driver — keep external for serverless bundles. */
+  serverExternalPackages: ['pg'],
 }
 
 export default nextConfig

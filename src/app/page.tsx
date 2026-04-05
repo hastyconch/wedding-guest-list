@@ -18,7 +18,7 @@ import {
   getHouseholdStatsForScenario,
   getInvitedBreakdownForScenario,
 } from '@/lib/data/guests'
-import { getDefaultScenario } from '@/lib/data/scenarios'
+import { ensureDefaultScenario } from '@/lib/data/scenarios'
 import { CAPACITY } from '@/lib/warnings'
 
 export const dynamic = 'force-dynamic'
@@ -27,36 +27,12 @@ const secondaryBtnClass =
   'inline-flex min-h-10 items-center justify-center rounded-md border border-white/8 bg-[#2b2d31] px-4 text-sm font-medium text-[#dbdee1] shadow-sm transition-colors hover:bg-[#35373c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5865f2]'
 
 export default async function Home() {
-  let scenario: Awaited<ReturnType<typeof getDefaultScenario>>
+  let scenario: Awaited<ReturnType<typeof ensureDefaultScenario>>
   let invited: number
   let breakdown: Awaited<ReturnType<typeof getInvitedBreakdownForScenario>>
   let householdStats: Awaited<ReturnType<typeof getHouseholdStatsForScenario>>
   try {
-    scenario = await getDefaultScenario()
-    if (!scenario) {
-      return (
-        <div className="rounded-lg border border-white/10 bg-[#2b2d31] p-6 shadow-sm">
-          <p className="font-semibold text-[#dbdee1]">No scenarios yet.</p>
-          <p className="mt-2 text-sm text-[#949ba4]">
-            Locally: run{' '}
-            <code className="rounded bg-[#1e1f22] px-1.5 py-0.5 text-xs text-[#dbdee1]">
-              npx prisma db seed
-            </code>{' '}
-            then refresh. On Vercel: set{' '}
-            <code className="rounded bg-[#1e1f22] px-1.5 py-0.5 text-xs">SEED_SECRET</code>{' '}
-            in project env, redeploy, then{' '}
-            <code className="rounded bg-[#1e1f22] px-1.5 py-0.5 text-xs">
-              POST /api/admin/seed
-            </code>{' '}
-            with header{' '}
-            <code className="rounded bg-[#1e1f22] px-1.5 py-0.5 text-xs">
-              x-seed-secret
-            </code>
-            .
-          </p>
-        </div>
-      )
-    }
+    scenario = await ensureDefaultScenario()
     ;[invited, breakdown, householdStats] = await Promise.all([
       countInvitedForScenario(scenario.id),
       getInvitedBreakdownForScenario(scenario.id),
@@ -69,16 +45,12 @@ export default async function Home() {
         <p className="font-semibold text-[#dbdee1]">Could not load the dashboard</p>
         <p className="mt-2 text-[#949ba4]">{msg}</p>
         <p className="mt-4 text-xs text-[#6d737a]">
-          From the project folder, run{' '}
+          Set <code className="rounded bg-[#1e1f22] px-1.5 py-0.5">DATABASE_URL</code> to a PostgreSQL URL
+          (e.g. Neon) in <code className="rounded bg-[#1e1f22] px-1.5 py-0.5">.env.local</code>, then run{' '}
           <code className="rounded bg-[#1e1f22] px-1.5 py-0.5 text-[#dbdee1]">
             npx prisma migrate dev
-          </code>{' '}
-          then{' '}
-          <code className="rounded bg-[#1e1f22] px-1.5 py-0.5 text-[#dbdee1]">
-            npx prisma db seed
           </code>
-          . Ensure <code className="rounded bg-[#1e1f22] px-1.5 py-0.5">DATABASE_URL</code>{' '}
-          in <code className="rounded bg-[#1e1f22] px-1.5 py-0.5">.env</code> points at your SQLite file.
+          .
         </p>
       </div>
     )

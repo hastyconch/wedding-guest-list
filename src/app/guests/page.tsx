@@ -1,26 +1,15 @@
 import { GuestsFilteredList } from '@/components/guests-filtered-list'
 import { listGuestsForScenario } from '@/lib/data/guests'
-import { getDefaultScenario } from '@/lib/data/scenarios'
+import { ensureDefaultScenario } from '@/lib/data/scenarios'
 import { CAPACITY, partnerWarnings, sideImbalanceWarning } from '@/lib/warnings'
 
 export const dynamic = 'force-dynamic'
 
 export default async function GuestsPage() {
-  let scenario: Awaited<ReturnType<typeof getDefaultScenario>>
+  let scenario: Awaited<ReturnType<typeof ensureDefaultScenario>>
   let guests: Awaited<ReturnType<typeof listGuestsForScenario>>
   try {
-    scenario = await getDefaultScenario()
-    if (!scenario) {
-      return (
-        <p className="text-[#949ba4]">
-          No scenario — run{' '}
-          <code className="rounded bg-[#1e1f22] px-1.5 py-0.5 text-xs text-[#dbdee1]">
-            npx prisma db seed
-          </code>
-          .
-        </p>
-      )
-    }
+    scenario = await ensureDefaultScenario()
     guests = await listGuestsForScenario(scenario.id)
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
@@ -29,9 +18,8 @@ export default async function GuestsPage() {
         <p className="font-semibold">Could not load guests</p>
         <p className="mt-2 text-[#949ba4]">{msg}</p>
         <p className="mt-4 text-xs text-[#6d737a]">
-          Run{' '}
-          <code className="rounded bg-[#1e1f22] px-1.5 py-0.5">npx prisma migrate dev</code> and{' '}
-          <code className="rounded bg-[#1e1f22] px-1.5 py-0.5">npx prisma db seed</code>.
+          Set <code className="rounded bg-[#1e1f22] px-1.5 py-0.5">DATABASE_URL</code> to PostgreSQL and run{' '}
+          <code className="rounded bg-[#1e1f22] px-1.5 py-0.5">npx prisma migrate dev</code>.
         </p>
       </div>
     )

@@ -1,68 +1,23 @@
-import { copyFileSync, existsSync } from 'node:fs'
-import path from 'node:path'
-
 import { loadEnvConfig } from '@next/env'
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3'
+import { PrismaPg } from '@prisma/adapter-pg'
 import { PrismaClient } from '@/generated/prisma/client'
 
-/** Load `.env` / `.env.local` before reading `DATABASE_URL` (matches Next.js; fixes missing env in some dev setups). */
+/** Load `.env` / `.env.local` before reading `DATABASE_URL` (matches Next.js). */
 loadEnvConfig(process.cwd())
 
-/** Local dev: project-root SQLite. Vercel serverless FS is read-only except `/tmp`, so DB must live there. */
-function defaultSqliteUrl(): string {
-  if (process.env.VERCEL === '1' || process.env.VERCEL === 'true') {
-    return 'file:/tmp/wedding-guest.db'
-  }
-  return 'file:./dev.db'
-}
-
-function resolveSqliteFileUrl(): string {
-  let raw = process.env.DATABASE_URL?.trim() || defaultSqliteUrl()
-  if (!raw.startsWith('file:')) {
-    throw new Error(`Expected DATABASE_URL to start with file: — got ${raw}`)
-  }
-  /** Dashboard often sets `file:./dev.db`; that path is not writable on Vercel. */
-  if (
-    (process.env.VERCEL === '1' || process.env.VERCEL === 'true') &&
-    (raw === 'file:./dev.db' || raw === 'file:dev.db')
-  ) {
-    raw = 'file:/tmp/wedding-guest.db'
-  }
-  return raw
-}
-
-function sqliteUrlToAbsolutePath(url: string): string {
-  const rest = url.slice('file:'.length)
-  if (rest.startsWith('./')) {
-    return path.join(process.cwd(), rest.slice(2))
-  }
-  return rest
-}
-
-/**
- * Vercel: `/tmp` is writable but empty. We ship a migrated empty DB from `prisma/build.db`
- * (created in `npm run build`) and copy it once — `npx prisma migrate deploy` is not available in the serverless bundle.
- */
-function ensureVercelSqliteFromBuildArtifact(fileUrl: string) {
-  if (process.env.VERCEL !== '1' && process.env.VERCEL !== 'true') return
-
-  const g = globalThis as unknown as { __weddingSqliteCopied?: boolean }
-  if (g.__weddingSqliteCopied) return
-
-  const absolutePath = sqliteUrlToAbsolutePath(fileUrl)
-  if (existsSync(absolutePath)) {
-    g.__weddingSqliteCopied = true
-    return
-  }
-
-  const template = path.join(process.cwd(), 'prisma', 'build.db')
-  if (!existsSync(template)) {
+function getDatabaseUrl(): string {
+  const url = process.env.DATABASE_URL?.trim()
+  if (!url) {
     throw new Error(
-      'Missing prisma/build.db. Run `npm run build` locally — Vercel build must run `prisma migrate deploy` before `next build`.'
+      'DATABASE_URL is not set. Add a PostgreSQL URL to .env.local (e.g. Neon — see README).'
     )
   }
-  copyFileSync(template, absolutePath)
-  g.__weddingSqliteCopied = true
+  if (!url.startsWith('postgres://') && !url.startsWith('postgresql://')) {
+    throw new Error(
+      'DATABASE_URL must be postgres:// or postgresql://. This app uses PostgreSQL so everyone hitting your deploy shares one database.'
+    )
+  }
+  return url
 }
 
 const globalForPrisma = globalThis as unknown as {
@@ -70,10 +25,8 @@ const globalForPrisma = globalThis as unknown as {
 }
 
 function createClient(): PrismaClient {
-  const fileUrl = resolveSqliteFileUrl()
-  ensureVercelSqliteFromBuildArtifact(fileUrl)
-  const absolutePath = sqliteUrlToAbsolutePath(fileUrl)
-  const adapter = new PrismaBetterSqlite3({ url: absolutePath })
+  const connectionString = getDatabaseUrl()
+  const adapter = new PrismaPg({ connectionString })
   return new PrismaClient({ adapter })
 }
 

@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { createOAuth2Client, OAUTH_ID } from '@/lib/google-oauth'
 import { normalizeSpreadsheetId } from '@/lib/google-sheet-id'
 import { parseHeaderRow, rowToGuest } from '@/lib/google-sheet-import'
+import { resolveScenarioForImport } from '@/lib/data/scenarios'
 import { prisma } from '@/lib/prisma'
 
 export const runtime = 'nodejs'
@@ -30,10 +31,8 @@ export async function POST(req: Request) {
     )
   }
 
-  const scenario = await prisma.scenario.findUnique({ where: { id: scenarioId } })
-  if (!scenario) {
-    return NextResponse.json({ error: 'Scenario not found' }, { status: 404 })
-  }
+  const scenario = await resolveScenarioForImport(scenarioId)
+  const resolvedScenarioId = scenario.id
 
   const cred = await prisma.oAuthCredential.findUnique({
     where: { id: OAUTH_ID },
@@ -91,9 +90,16 @@ export async function POST(req: Request) {
       })
       await prisma.scenarioGuest.upsert({
         where: {
-          scenarioId_guestId: { scenarioId, guestId: guest.id },
+          scenarioId_guestId: {
+            scenarioId: resolvedScenarioId,
+            guestId: guest.id,
+          },
         },
-        create: { scenarioId, guestId: guest.id, invited: false },
+        create: {
+          scenarioId: resolvedScenarioId,
+          guestId: guest.id,
+          invited: false,
+        },
         update: {},
       })
       imported += 1

@@ -10,6 +10,37 @@ import { normalizeSpreadsheetId } from '@/lib/google-sheet-id'
 
 type Props = { scenarioId: string }
 
+function formatApiError(data: { error?: unknown }): string {
+  const e = data.error
+  if (typeof e === 'string') return e
+  if (e && typeof e === 'object') {
+    try {
+      return JSON.stringify(e)
+    } catch {
+      return 'Request failed'
+    }
+  }
+  return 'Request failed'
+}
+
+/** Same-origin fetch for the current scenario id (avoids stale SSR props vs another serverless DB). */
+async function fetchScenarioIdForRequest(fallback: string): Promise<string> {
+  try {
+    const r = await fetch('/api/scenarios', { cache: 'no-store' })
+    if (!r.ok) return fallback
+    const d = (await r.json()) as {
+      scenarios?: Array<{ id: string; isDefault: boolean }>
+    }
+    const list = d.scenarios ?? []
+    const def = list.find((s) => s.isDefault)
+    if (def) return def.id
+    if (list[0]) return list[0].id
+  } catch {
+    /* use fallback */
+  }
+  return fallback
+}
+
 export function GoogleSheetsImport({ scenarioId }: Props) {
   const router = useRouter()
   const [connected, setConnected] = useState<boolean | null>(null)
@@ -34,18 +65,19 @@ export function GoogleSheetsImport({ scenarioId }: Props) {
     setLoading(true)
     setMsg(null)
     try {
+      const id = await fetchScenarioIdForRequest(scenarioId)
       const res = await fetch('/api/google/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           spreadsheetId: normalizeSpreadsheetId(spreadsheetId),
           range: range.trim() || 'Sheet1!A1:Z500',
-          scenarioId,
+          scenarioId: id,
         }),
       })
-      const data = await res.json()
+      const data = (await res.json()) as { error?: unknown; imported?: number; errors?: string[] }
       if (!res.ok) {
-        setMsg(data.error ?? 'Import failed')
+        setMsg(formatApiError(data))
         return
       }
       setMsg(
@@ -74,15 +106,16 @@ export function GoogleSheetsImport({ scenarioId }: Props) {
     setClearing(true)
     setMsg(null)
     try {
-      const res = await fetch(`/api/scenarios/${scenarioId}/clear-import`, {
+      const id = await fetchScenarioIdForRequest(scenarioId)
+      const res = await fetch(`/api/scenarios/${id}/clear-import`, {
         method: 'POST',
       })
       const data = (await res.json()) as {
-        error?: string
+        error?: unknown
         removedGuests?: number
       }
       if (!res.ok) {
-        setMsg(data.error ?? 'Could not clear guests')
+        setMsg(formatApiError(data))
         return
       }
       setMsg(

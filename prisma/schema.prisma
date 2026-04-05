@@ -1,4 +1,5 @@
-// Wedding guest list — SQLite (local MVP)
+// Wedding guest list — PostgreSQL (connection URL in prisma.config.ts).
+// Deploy: set DATABASE_URL to Neon (or any Postgres) on Vercel so all visitors share one DB.
 
 generator client {
   provider = "prisma-client"
@@ -6,7 +7,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 enum GuestCategory {
